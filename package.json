@@ -1,0 +1,63 @@
+{
+  "name": "libtess-ts",
+  "version": "0.0.1",
+  "description": "Performance-optimized TypeScript port of libtess.js, itself based on the GLU tessellator. Fast, high quality polygon triangulation",
+  "type": "module",
+  "main": "./dist/libtess.min.js",
+  "module": "./dist/libtess.min.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "development": "./dist/libtess.es.js",
+      "default": "./dist/libtess.min.js"
+    }
+  },
+  "files": [
+    "dist",
+    "types",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/countertype/libtess-ts.git"
+  },
+  "homepage": "https://github.com/countertype/libtess-ts",
+  "bugs": "https://github.com/countertype/libtess-ts/issues",
+  "scripts": {
+    "build": "rollup -c && tsc --emitDeclarationOnly",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench": "node benchmarks/benchmark.mjs",
+    "bench:browser": "node benchmarks/browser/serve.js",
+    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts' '*.js' '*.ts' '*.json'",
+    "format:check": "prettier --check 'src/**/*.ts' 'test/**/*.ts' '*.js' '*.ts' '*.json'",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "tessellate",
+    "tessellation",
+    "triangulate",
+    "triangulation",
+    "glu",
+    "libtess",
+    "polygon",
+    "geometry",
+    "mesh",
+    "typescript"
+  ],
+  "author": "Jeremy Tribby, Countertype LLC",
+  "license": "SGI-B-2.0",
+  "sideEffects": false,
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "libtess": "^1.2.2",
+    "prettier": "^3.8.1",
+    "rollup": "^4.57.1",
+    "tess2-ts": "^1.0.8",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

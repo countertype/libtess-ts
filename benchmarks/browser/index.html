@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>libtess-ts Browser Benchmark</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; padding: 24px; }
+    h1 { font-size: 16px; margin-bottom: 4px; }
+    .subtitle { color: #888; margin-bottom: 16px; }
+    .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+    button { font-family: inherit; font-size: 13px; padding: 6px 16px; cursor: pointer; background: #333; color: #fff; border: none; border-radius: 3px; }
+    button:hover { background: #555; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    select, input { font-family: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: right; font-size: 13px; }
+    th { background: #eee; text-align: center; font-weight: 600; }
+    td:first-child { text-align: left; }
+    .faster { color: #1a7f37; }
+    .slower { color: #cf222e; }
+    .neutral { color: #888; }
+    #log { margin-top: 16px; white-space: pre-wrap; font-size: 12px; color: #555; max-height: 300px; overflow-y: auto; }
+    .note { font-size: 11px; color: #999; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>libtess-ts Browser Benchmark</h1>
+  <div class="subtitle">3-way cold start comparison. All runners accumulate output arrays.</div>
+
+  <div class="controls">
+    <button id="runBtn">Run Benchmark</button>
+    <label>Samples: <input id="samples" type="number" value="1000" min="50" max="5000" style="width:70px"></label>
+    <label>Warmup: <input id="warmup" type="number" value="200" min="0" max="1000" style="width:70px"></label>
+    <span id="status" style="color:#888;">Loading...</span>
+  </div>
+
+  <table id="results">
+    <thead>
+      <tr>
+        <th>Workload</th>
+        <th>libtess.js</th>
+        <th>libtess-ts</th>
+        <th>tess2-ts</th>
+        <th>JS vs TS</th>
+        <th>JS vs T2</th>
+        <th>TS vs T2</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="note">
+    Negative % = second is faster. Paired t-test with rotating order cancels thermal drift.
+    *** p&lt;0.001 &nbsp; ** p&lt;0.01 &nbsp; * p&lt;0.05 &nbsp; ns = not significant
+  </div>
+
+  <pre id="log"></pre>
+
+  <!-- libtess.js (IIFE, sets window.libtess) -->
+  <script src="/libtess.min.js"></script>
+
+  <!-- tess2-ts (IIFE, sets window.Tess2) -->
+  <script src="/tess2.js"></script>
+
+  <!-- libtess-ts (ESM) -->
+  <script type="module">
+    import * as mod from '/dist/libtess.min.js';
+    window._libtessTs = mod;
+    const ready = window.Tess2 && window.libtess && mod;
+    document.getElementById('status').textContent = ready ? 'Libraries loaded' : 'Loading...';
+  </script>
+
+  <script>
+function makeGlyph() {
+  const outer = [], hole = [];
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    outer.push(Math.cos(a) * 50, Math.sin(a) * 70);
+  }
+  for (let i = 20 - 1; i >= 0; i--) {
+    const a = (i / 20) * Math.PI * 2;
+    hole.push(Math.cos(a) * 25, Math.sin(a) * 40);
+  }
+  return { contours: [outer, hole], stride: 2 };
+}
+
+function makeGlyphE() {
+  const commands = [
+    { cmd: 'M', pts: [375, 576] },
+    { cmd: 'L', pts: [375, 576] },
+    { cmd: 'L', pts: [853, 576] },
+    { cmd: 'C', pts: [861, 604, 867, 658, 867, 750] },
+    { cmd: 'C', pts: [864, 976, 729, 1116, 502, 1116] },
+    { cmd: 'C', pts: [238, 1116, 50, 913, 50, 584] },
+    { cmd: 'C', pts: [50, 267, 190, 50, 489, 50] },
+    { cmd: 'C', pts: [647, 50, 791, 133, 839, 199] },
+    { cmd: 'L', pts: [817, 258] },
+    { cmd: 'C', pts: [769, 213, 685, 182, 630, 182] },
+    { cmd: 'C', pts: [454, 182, 390, 358, 387, 598] },
+    { cmd: 'C', pts: [382, 995, 425, 1061, 487, 1061] },
+    { cmd: 'C', pts: [541, 1061, 563, 994, 563, 771] },
+    { cmd: 'L', pts: [563, 609] },
+    { cmd: 'L', pts: [710, 652] },
+    { cmd: 'L', pts: [373, 631] },
+    { cmd: 'Z', pts: [] },
+  ];
+  function sampleCubic(p0, p1, p2, p3, segs) {
+    const pts = [];
+    for (let i = 1; i <= segs; i++) {
+      const t = i / segs, mt = 1 - t;
+      pts.push(
+        mt*mt*mt*p0[0] + 3*mt*mt*t*p1[0] + 3*mt*t*t*p2[0] + t*t*t*p3[0],
+        mt*mt*mt*p0[1] + 3*mt*mt*t*p1[1] + 3*mt*t*t*p2[1] + t*t*t*p3[1]
+      );
+    }
+    return pts;
+  }
+  const contour = [];
+  let cur = [0,0], start = [0,0];
+  for (const c of commands) {
+    if (c.cmd === 'M') { cur = [c.pts[0], c.pts[1]]; start = cur.slice(); contour.push(cur[0], cur[1]); }
+    else if (c.cmd === 'L') { cur = [c.pts[0], c.pts[1]]; contour.push(cur[0], cur[1]); }
+    else if (c.cmd === 'C') { const s = sampleCubic(cur, [c.pts[0],c.pts[1]], [c.pts[2],c.pts[3]], [c.pts[4],c.pts[5]], 24); contour.push(...s); cur = [c.pts[4],c.pts[5]]; }
+    else if (c.cmd === 'Z') { contour.push(start[0], start[1]); }
+  }
+  return { contours: [contour], stride: 2, needsCombine: true };
+}
+
+function makeStar(n) {
+  const c = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const r = 100 + Math.sin(a * 7) * 10 + Math.cos(a * 13) * 5;
+    c.push(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  return { contours: [c], stride: 2 };
+}
+
+function makeNestedRings() {
+  const contours = [];
+  for (let ring = 0; ring < 5; ring++) {
+    const r = 20 + ring * 15;
+    const pts = [];
+    const n = 40;
+    const dir = ring % 2 === 0 ? 1 : -1;
+    for (let i = 0; i < n; i++) {
+      const idx = dir > 0 ? i : n - 1 - i;
+      const a = (idx / n) * Math.PI * 2;
+      pts.push(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    contours.push(pts);
+  }
+  return { contours, stride: 2 };
+}
+
+function makeSelfIntersectingStar(n) {
+  const c = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const r = i % 2 === 0 ? 100 : 40;
+    c.push(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  return { contours: [c], stride: 2, needsCombine: true };
+}
+
+function coldJS(geom) {
+  const t = new libtess.GluTesselator();
+  const verts = [];
+  t.gluTessCallback(libtess.gluEnum.GLU_TESS_VERTEX_DATA, (d) => { verts.push(d[0], d[1]); });
+  t.gluTessCallback(libtess.gluEnum.GLU_TESS_BEGIN, () => {});
+  t.gluTessCallback(libtess.gluEnum.GLU_TESS_END, () => {});
+  if (geom.needsCombine) t.gluTessCallback(libtess.gluEnum.GLU_TESS_COMBINE, c => [c[0], c[1]]);
+  t.gluTessNormal(0, 0, 1);
+  const tmp = [0, 0, 0];
+  const start = performance.now();
+  t.gluTessBeginPolygon();
+  for (const c of geom.contours) {
+    t.gluTessBeginContour();
+    for (let j = 0; j < c.length; j += geom.stride) {
+      tmp[0] = c[j]; tmp[1] = c[j+1]; tmp[2] = 0;
+      t.gluTessVertex(tmp, [c[j], c[j+1]]);
+    }
+    t.gluTessEndContour();
+  }
+  t.gluTessEndPolygon();
+  return performance.now() - start;
+}
+
+function coldTS(geom) {
+  const mod = window._libtessTs;
+  const t = new mod.GluTesselator();
+  const verts = [];
+  t.gluTessCallback(100100, () => {});
+  t.gluTessCallback(100101, (d) => { verts.push(d[0], d[1]); });
+  t.gluTessCallback(100102, () => {});
+  if (geom.needsCombine) t.gluTessCallback(100105, c => [c[0], c[1]]);
+  t.gluTessNormal(0, 0, 1);
+  const tmp = [0, 0];
+  const start = performance.now();
+  t.gluTessBeginPolygon();
+  for (const c of geom.contours) {
+    t.gluTessBeginContour();
+    for (let j = 0; j < c.length; j += geom.stride) {
+      tmp[0] = c[j]; tmp[1] = c[j+1];
+      t.gluTessVertex(tmp, [c[j], c[j+1]]);
+    }
+    t.gluTessEndContour();
+  }
+  t.gluTessEndPolygon();
+  return performance.now() - start;
+}
+
+function coldTess2(geom) {
+  const start = performance.now();
+  Tess2.tesselate({
+    contours: geom.contours,
+    windingRule: Tess2.WINDING.NONZERO,
+    elementType: Tess2.ELEMENT.POLYGONS,
+    polySize: 3,
+    vertexSize: 2,
+  });
+  return performance.now() - start;
+}
+
+function mean(arr) { let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; return s / arr.length; }
+function variance(arr, m) { let s = 0; for (let i = 0; i < arr.length; i++) { const d = arr[i] - m; s += d * d; } return s / (arr.length - 1); }
+
+function normCDF(x) {
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const sgn = x < 0 ? -1 : 1; x = Math.abs(x) / Math.SQRT2;
+  const t = 1/(1+p*x);
+  return 0.5*(1+sgn*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x)));
+}
+function tCDF(t,df) { return normCDF(t*(1-1/(4*df))); }
+
+function pairedTest(a, b) {
+  const n = a.length;
+  const diffs = new Float64Array(n);
+  for (let i = 0; i < n; i++) diffs[i] = a[i] - b[i];
+  const m = mean(diffs);
+  const v = variance(diffs, m);
+  const se = Math.sqrt(v / n);
+  const t = se > 0 ? m / se : 0;
+  const df = n - 1;
+  const p = 2 * (1 - tCDF(Math.abs(t), df));
+  const tCrit = 1.96 + 2.4 / df;
+  const ci = tCrit * se;
+  return { meanDiff: m, ci, p };
+}
+
+function fmtDiff(baseline, other, res) {
+  const pct = ((other - baseline) / baseline * 100);
+  const sig = res.p < 0.001 ? '***' : res.p < 0.01 ? '**' : res.p < 0.05 ? '*' : 'ns';
+  const cls = Math.abs(pct) < 2 || res.p >= 0.05 ? 'neutral' : pct < 0 ? 'faster' : 'slower';
+  return { text: `${pct > 0 ? '+' : ''}${pct.toFixed(1)}% ${sig}`, cls };
+}
+
+const WORKLOADS = [
+  { name: 'Glyph 60v', make: makeGlyph },
+  { name: 'Glyph-e 224v (self-X)', make: makeGlyphE },
+  { name: 'Star 200v', make: () => makeStar(200) },
+  { name: 'Star 500v', make: () => makeStar(500) },
+  { name: 'Star 1Kv', make: () => makeStar(1000) },
+  { name: 'Star 3Kv', make: () => makeStar(3000) },
+  { name: 'Nested rings 5x40v', make: makeNestedRings },
+  { name: 'Self-X star 100v', make: () => makeSelfIntersectingStar(100) },
+  { name: 'Self-X star 500v', make: () => makeSelfIntersectingStar(500) },
+];
+
+async function runBench() {
+  const btn = document.getElementById('runBtn');
+  const tbody = document.querySelector('#results tbody');
+  const logEl = document.getElementById('log');
+  const statusEl = document.getElementById('status');
+  const SAMPLES = parseInt(document.getElementById('samples').value) || 200;
+  const WARMUP = parseInt(document.getElementById('warmup').value) || 100;
+
+  btn.disabled = true;
+  tbody.innerHTML = '';
+  logEl.textContent = '';
+
+  function log(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+
+  log(`3-way: libtess.js vs libtess-ts vs tess2-ts`);
+  log(`${WARMUP} warmup + ${SAMPLES} samples, rotating order\n`);
+
+  for (const wl of WORKLOADS) {
+    statusEl.textContent = `Running: ${wl.name}...`;
+    await new Promise(r => setTimeout(r, 50));
+
+    const geom = wl.make();
+
+    for (let i = 0; i < WARMUP; i++) { coldJS(geom); coldTS(geom); coldTess2(geom); }
+
+    const tA = new Float64Array(SAMPLES);
+    const tB = new Float64Array(SAMPLES);
+    const tC = new Float64Array(SAMPLES);
+    for (let i = 0; i < SAMPLES; i++) {
+      switch (i % 3) {
+        case 0: tA[i] = coldJS(geom); tB[i] = coldTS(geom); tC[i] = coldTess2(geom); break;
+        case 1: tB[i] = coldTS(geom); tC[i] = coldTess2(geom); tA[i] = coldJS(geom); break;
+        case 2: tC[i] = coldTess2(geom); tA[i] = coldJS(geom); tB[i] = coldTS(geom); break;
+      }
+    }
+
+    const mA = mean(tA), mB = mean(tB), mC = mean(tC);
+    const ab = pairedTest(tA, tB);
+    const ac = pairedTest(tA, tC);
+    const bc = pairedTest(tB, tC);
+
+    const dAB = fmtDiff(mA, mB, ab);
+    const dAC = fmtDiff(mA, mC, ac);
+    const dBC = fmtDiff(mB, mC, bc);
+
+    log(`${wl.name}  JS:${(mA*1000).toFixed(0)}us  TS:${(mB*1000).toFixed(0)}us  T2:${(mC*1000).toFixed(0)}us  JS→TS:${dAB.text}  JS→T2:${dAC.text}  TS→T2:${dBC.text}`);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${wl.name}</td>
+      <td>${(mA*1000).toFixed(0)}us</td>
+      <td>${(mB*1000).toFixed(0)}us</td>
+      <td>${(mC*1000).toFixed(0)}us</td>
+      <td class="${dAB.cls}">${dAB.text}</td>
+      <td class="${dAC.cls}">${dAC.text}</td>
+      <td class="${dBC.cls}">${dBC.text}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  log('\nDone.');
+  statusEl.textContent = 'Done';
+  btn.disabled = false;
+}
+
+document.getElementById('runBtn').onclick = () => {
+  if (!window._libtessTs) { alert('libtess-ts not loaded yet'); return; }
+  if (!window.Tess2) { alert('tess2-ts not loaded yet'); return; }
+  runBench();
+};
+  </script>
+</body>
+</html>
