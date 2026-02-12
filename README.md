@@ -122,14 +122,14 @@ const tess = new GluTesselator()
 
 tess.gluTessBeginPolygon()
 // ... add contours ...
-// Don't call gluTessEndPolygon() -- use compute() instead
+// Don't call gluTessEndPolygon(), use compute() instead
 
 tess.compute(WINDING.NONZERO)
 
 // Extract triangles first
 tess.renderTriangles()
 
-// Then extract boundary contours (destructive -- call after renderTriangles)
+// Then extract boundary contours (destructive: call after renderTriangles)
 tess.renderBoundary()
 ```
 
@@ -150,7 +150,7 @@ tess.gluTessCallback(GLU_TESS.COMBINE, (coords, data, weights) => {
 
 The core algorithm and `gluTess*` method signatures are identical. If you have working libtess.js code, migration is mostly import changes. Here's what's different:
 
-**Imports and enums** -- ESM only, shorter enum names:
+**Imports and enums:** ESM only, shorter enum names:
 
 ```javascript
 // libtess.js
@@ -176,11 +176,6 @@ tess.gluTessCallback(GLU_TESS.VERTEX, fn);
 
 - `gluTessVertex` accepts `[x, y]` in addition to `[x, y, z]` (z defaults to 0)
 - `compute()`, `renderTriangles()`, and `renderBoundary()` let you run the sweep once and extract multiple output formats (see [separate sweep and render](#separate-sweep-and-render))
-
-**Not supported:**
-
-- CommonJS `require()` -- use `import` or a bundler
-- `libtess.meshUtils` -- internal mesh utilities are not exported
 
 ## Benchmarks
 

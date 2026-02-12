@@ -1,7 +1,7 @@
 {
   "name": "libtess-ts",
   "version": "0.0.1",
-  "description": "Performance-optimized TypeScript port of libtess.js, itself based on the GLU tessellator. Fast, high quality polygon triangulation",
+  "description": "Optimized TypeScript port of libtess.js, itself based on the GLU tessellator. Fast, high quality polygon triangulation",
   "type": "module",
   "main": "./dist/libtess.min.js",
   "module": "./dist/libtess.min.js",
