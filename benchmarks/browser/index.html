@@ -41,7 +41,7 @@
         <th>Workload</th>
         <th>libtess.js</th>
         <th>libtess-ts</th>
-        <th>tess2-ts</th>
+        <th>tess2.js</th>
         <th>JS vs TS</th>
         <th>JS vs T2</th>
         <th>TS vs T2</th>
@@ -60,7 +60,7 @@
   <!-- libtess.js (IIFE, sets window.libtess) -->
   <script src="/libtess.min.js"></script>
 
-  <!-- tess2-ts (IIFE, sets window.Tess2) -->
+  <!-- tess2.js (CJS wrapped for browser, sets window.Tess2) -->
   <script src="/tess2.js"></script>
 
   <!-- libtess-ts (ESM) -->
@@ -215,8 +215,8 @@ function coldTess2(geom) {
   const start = performance.now();
   Tess2.tesselate({
     contours: geom.contours,
-    windingRule: Tess2.WINDING.NONZERO,
-    elementType: Tess2.ELEMENT.POLYGONS,
+    windingRule: Tess2.WINDING_NONZERO,
+    elementType: Tess2.POLYGONS,
     polySize: 3,
     vertexSize: 2,
   });
@@ -282,7 +282,7 @@ async function runBench() {
 
   function log(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
 
-  log(`3-way: libtess.js vs libtess-ts vs tess2-ts`);
+  log(`3-way: libtess.js vs libtess-ts vs tess2.js`);
   log(`${WARMUP} warmup + ${SAMPLES} samples, rotating order\n`);
 
   for (const wl of WORKLOADS) {
@@ -335,7 +335,7 @@ async function runBench() {
 
 document.getElementById('runBtn').onclick = () => {
   if (!window._libtessTs) { alert('libtess-ts not loaded yet'); return; }
-  if (!window.Tess2) { alert('tess2-ts not loaded yet'); return; }
+  if (!window.Tess2) { alert('tess2.js not loaded yet'); return; }
   runBench();
 };
   </script>

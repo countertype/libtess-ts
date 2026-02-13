@@ -12,15 +12,15 @@ This library builds on libtess.js, which faithfully ported the GLU tessellator t
 - Direct monotone rendering: triangulates monotone faces inline during the sweep, avoiding a separate mesh-modification pass
 - 2D fast path: when you call `gluTessNormal(0, 0, 1)`, vertex projection is folded into `gluTessVertex` instead of requiring a separate loop over all vertices
 - Reduced allocation: scratch buffers, priority queue storage, and temporary objects are reused across calls rather than re-allocated each time
-- Typed arrays: the priority queue heap uses `Int32Array` instead of plain arrays
+- Typed arrays in the priority queue heap
 
-See [changes from libtess.js](#changes-from-libtessjs) for the full list of API differences.
+See [changes from libtess.js](#changes-from-libtessjs) for the full list of API differences
 
-### vs tess2-ts
+### vs tess2.js
 
-[libtess2](https://github.com/memononen/libtess2) by Mikko Mononen is a performance oriented adaptation of the original SGI GLU tessellator with a simpler API. It reports a 15-50x speedup in C. [tess2-ts](https://github.com/eXponenta/tess2.js) is its JavaScript port
+[libtess2](https://github.com/memononen/libtess2) by Mikko Mononen is a performance oriented adaptation of the original SGI GLU tessellator with a simpler API. It reports a 15-50x speedup in C. [tess2.js](https://github.com/memononen/tess2.js) is its JavaScript port
 
-In JavaScript, though, the performance picture is different: libtess-ts is typically 40-90% faster than tess2-ts on the same inputs. libtess2's key optimization is a bucketed memory allocator that replaces many small `malloc` calls; a significant win in C, but in JavaScript there is no `malloc` to avoid as the GC manages the heap, so the optimization doesn't carry over
+In JavaScript, though, the performance picture is different: libtess-ts is typically 40-90% faster than tess2.js on the same inputs. libtess2's key optimization is a bucketed memory allocator that replaces many small `malloc` calls; a significant win in C, but in JavaScript there is no `malloc` to avoid as the GC manages the heap, so the optimization doesn't carry over
 
 See [benchmarks](#benchmarks) for numbers
 
@@ -135,7 +135,7 @@ tess.renderBoundary()
 
 ### Combine callback
 
-When contours self-intersect, the tessellator needs to create new vertices at the intersection points. It knows where they go, but not what data to put there - that's your job. Supply a combine callback to interpolate vertex attributes:
+When contours self-intersect, the tessellator needs to create new vertices at the intersection points. Supply a combine callback to interpolate vertex attributes:
 
 ```typescript
 tess.gluTessCallback(GLU_TESS.COMBINE, (coords, data, weights) => {
@@ -183,16 +183,16 @@ All measurements use paired testing with 200 warmup iterations, 500 samples, and
 
 ### Cold path (new instance per call)
 
-| Workload | libtess.js | libtess-ts | tess2-ts | JS vs TS | JS vs T2 |
+| Workload | libtess.js | libtess-ts | tess2.js | JS vs TS | JS vs T2 |
 |---|---|---|---|---|---|
-| Glyph, 60v | 24 us | 23 us | 30 us | -5% | +23% *** |
-| Self-intersecting glyph, 224v | 86 us | 78 us | 114 us | -9% *** | +34% *** |
-| Star, 1K vertices | 412 us | 399 us | 625 us | -3% | +52% *** |
-| Star, 7K vertices | 3451 us | 3028 us | 5350 us | -12% *** | +55% *** |
-| poly2tri dude, 104v | 44 us | 38 us | 49 us | -14% *** | +13% *** |
-| OSM building, 22v | 16 us | 10 us | 15 us | -36% *** | -3% |
-| OSM NYC z14, 475v | 341 us | 289 us | 550 us | -15% *** | +61% *** |
-| Dense intersections, 40v | 1070 us | 919 us | 1287 us | -14% *** | +20% *** |
+| Glyph, 60v | 24 us | 23 us | 30 us | -5% | +23% |
+| Self-intersecting glyph, 224v | 86 us | 78 us | 114 us | -9% | +34% |
+| Star, 1K vertices | 412 us | 399 us | 625 us | -3% | +52% |
+| Star, 7K vertices | 3451 us | 3028 us | 5350 us | -12% | +55% |
+| poly2tri dude, 104v | 44 us | 38 us | 49 us | -14% | +13% |
+| OSM building, 22v | 16 us | 10 us | 15 us | -36% | -3% |
+| OSM NYC z14, 475v | 341 us | 289 us | 550 us | -15% | +61% |
+| Dense intersections, 40v | 1070 us | 919 us | 1287 us | -14% | +20% |
 
 ### Warm path (reused instance, libtess.js vs libtess-ts)
 
@@ -206,7 +206,7 @@ All measurements use paired testing with 200 warmup iterations, 500 samples, and
 | OSM NYC z14, 475v | 218 us | 187 us | -15% | p < 0.0001 |
 | Dense intersections, 40v | 831 us | 706 us | -15% | p < 0.0001 |
 
-Negative percentages mean the second library is faster. `***` = p < 0.001
+Negative percentages mean the second library is faster
 
 ## License
 

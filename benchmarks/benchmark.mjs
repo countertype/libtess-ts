@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Paired A/B benchmark: libtess.js vs libtess-ts vs tess2-ts
+ * Paired A/B benchmark: libtess.js vs libtess-ts vs tess2.js
  *
  * Runs synthetic and real-world geometry workloads with statistical rigor:
  *   - Paired measurements alternate A/B to eliminate thermal drift
@@ -8,14 +8,14 @@
  *   - Cold (new instance per call) and warm (reused instance) paths
  *
  * All runners accumulate output (vertices + elements) for a fair comparison,
- * since tess2-ts always builds result arrays internally.
+ * since tess2.js always builds result arrays internally.
  */
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const libtessJs = require('libtess');
 const libtessTs = await import('../dist/libtess.min.js');
-const tess2 = await import('tess2-ts/dist/tess2.es.js');
+const tess2 = createRequire(import.meta.url)('tess2');
 
 const thirdPartyGeometries = [
   require('../test/data/geometry/poly2tri-dude.cjs'),
@@ -206,13 +206,13 @@ function coldTs2D(contours, useNormal, useCombine) {
   return performance.now() - start;
 }
 
-// tess2-ts cold (2D contours, always accumulates output)
+// tess2.js cold (2D contours, always accumulates output)
 function coldTess2_2D(contours, useNormal, useCombine) {
   const start = performance.now();
   tess2.tesselate({
     contours,
-    windingRule: tess2.WINDING.NONZERO,
-    elementType: tess2.ELEMENT.POLYGONS,
+    windingRule: tess2.WINDING_NONZERO,
+    elementType: tess2.POLYGONS,
     polySize: 3,
     vertexSize: 2,
   });
@@ -331,13 +331,13 @@ function coldTs3D(contours, useCombine) {
   return performance.now() - start;
 }
 
-// tess2-ts cold (3D contours, always accumulates output)
+// tess2.js cold (3D contours, always accumulates output)
 function coldTess2_3D(contours, useCombine) {
   const start = performance.now();
   tess2.tesselate({
     contours,
-    windingRule: tess2.WINDING.NONZERO,
-    elementType: tess2.ELEMENT.POLYGONS,
+    windingRule: tess2.WINDING_NONZERO,
+    elementType: tess2.POLYGONS,
     polySize: 3,
     vertexSize: 3,
   });
@@ -415,7 +415,7 @@ function vertCount(geom) {
   return n;
 }
 
-// Convert 3D contours (stride 3) to 2D (stride 2) for tess2-ts vertexSize=2
+// Convert 3D contours (stride 3) to 2D (stride 2) for tess2.js vertexSize=2
 function contours3Dto2D(contours) {
   return contours.map(c => {
     const out = [];
@@ -507,7 +507,7 @@ const W = 140;
 
 console.log();
 console.log('='.repeat(W));
-console.log(`  libtess.js (JS) vs libtess-ts (TS) vs tess2-ts (T2) | ${WARMUP} warmup + ${SAMPLES} samples | paired t-test`);
+console.log(`  libtess.js (JS) vs libtess-ts (TS) vs tess2.js (T2) | ${WARMUP} warmup + ${SAMPLES} samples | paired t-test`);
 console.log(`  All runners accumulate output arrays for fair comparison.`);
 console.log('='.repeat(W));
 
@@ -536,7 +536,7 @@ bench3('Star 7Kv, no normal',
   () => coldTs2D(star7k, false, false),
   () => coldTess2_2D(star7k, false, false));
 
-// Section 2: Synthetic warm (JS vs TS only - tess2-ts has no reuse path)
+// Section 2: Synthetic warm (JS vs TS only - tess2.js has no reuse path)
 console.log();
 console.log('  SYNTHETIC - WARM (reused instance, JS vs TS only)');
 console.log('  ' + '-'.repeat(W - 2));
@@ -579,6 +579,6 @@ for (const geom of thirdPartyGeometries) {
 console.log();
 console.log('  Significance: *** p<0.001  ** p<0.01  * p<0.05  ns = not significant');
 console.log('  Negative % = second library is faster. All runners accumulate vertices + elements.');
-console.log('  JS = libtess.js  TS = libtess-ts  T2 = tess2-ts');
+console.log('  JS = libtess.js  TS = libtess-ts  T2 = tess2.js');
 console.log('='.repeat(W));
 console.log();

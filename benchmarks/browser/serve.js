@@ -26,7 +26,12 @@ http.createServer((req, res) => {
   } else if (req.url === '/libtess.min.js') {
     filePath = path.join(PROJECT, 'node_modules/libtess/libtess.min.js');
   } else if (req.url === '/tess2.js') {
-    filePath = path.join(PROJECT, 'node_modules/tess2-ts/dist/tess2.js');
+    // Wrap CJS module for browser use
+    const src = fs.readFileSync(path.join(PROJECT, 'node_modules/tess2/src/tess2.js'), 'utf-8');
+    const wrapped = src.replace('module.exports = Tess2;', 'window.Tess2 = Tess2;');
+    res.writeHead(200, { 'Content-Type': 'text/javascript' });
+    res.end(wrapped, 'utf-8');
+    return;
   } else {
     res.writeHead(404);
     res.end('Not found');
