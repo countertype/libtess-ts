@@ -4,7 +4,6 @@
 // libtess.js simplified to GL_TRIANGLES only; we follow that for compatibility
 
 import { Mesh, Face, HalfEdge, Vertex } from './Mesh';
-import { vertLeq } from './Geom';
 import { TessCallbacks } from './types';
 
 const GL_TRIANGLES = 4;
@@ -53,6 +52,10 @@ export function renderMonotoneDirect(tess: TessCallbacks, mesh: Mesh): void {
 function emitTri(tess: TessCallbacks, a: Vertex, b: Vertex, c: Vertex) {
   // Ensure CCW winding via signed area
   const cross = a.s * (b.t - c.t) + b.s * (c.t - a.t) + c.s * (a.t - b.t);
+  emitTriCross(tess, a, b, c, cross);
+}
+
+function emitTriCross(tess: TessCallbacks, a: Vertex, b: Vertex, c: Vertex, cross: number) {
   if (cross >= 0) {
     tess.callVertexCallback(a.data);
     tess.callVertexCallback(b.data);
@@ -82,12 +85,21 @@ function emitMonotoneFace(face: Face, tess: TessCallbacks): void {
 
   ensureTyped(n);
 
-  // Find rightmost and leftmost vertices
+  // Find rightmost and leftmost vertices (vertLeq inlined on s/t)
   let rightIdx = 0;
   let leftIdx = 0;
+  let rv = _verts[0];
+  let lv = _verts[0];
   for (let i = 1; i < n; i++) {
-    if (!vertLeq(_verts[i], _verts[rightIdx])) rightIdx = i;
-    if (vertLeq(_verts[i], _verts[leftIdx])) leftIdx = i;
+    const v = _verts[i];
+    if (v.s > rv.s || (v.s === rv.s && v.t > rv.t)) {
+      rightIdx = i;
+      rv = v;
+    }
+    if (v.s < lv.s || (v.s === lv.s && v.t <= lv.t)) {
+      leftIdx = i;
+      lv = v;
+    }
   }
   if (rightIdx === leftIdx) return;
 
@@ -99,8 +111,8 @@ function emitMonotoneFace(face: Face, tess: TessCallbacks): void {
   _chain[m] = 1;
   m++;
 
-  let ui = (rightIdx + 1) % n;
-  let li = (rightIdx + n - 1) % n;
+  let ui = rightIdx + 1 === n ? 0 : rightIdx + 1;
+  let li = rightIdx === 0 ? n - 1 : rightIdx - 1;
 
   while (ui !== leftIdx || li !== leftIdx) {
     let takeUpper: boolean;
@@ -109,19 +121,22 @@ function emitMonotoneFace(face: Face, tess: TessCallbacks): void {
     } else if (li === leftIdx) {
       takeUpper = true;
     } else {
-      takeUpper = !vertLeq(_verts[ui], _verts[li]);
+      // !vertLeq(_verts[ui], _verts[li]), inlined
+      const u = _verts[ui];
+      const l = _verts[li];
+      takeUpper = u.s > l.s || (u.s === l.s && u.t > l.t);
     }
 
     if (takeUpper) {
       _merged[m] = ui;
       _chain[m] = 1;
       m++;
-      ui = (ui + 1) % n;
+      ui = ui + 1 === n ? 0 : ui + 1;
     } else {
       _merged[m] = li;
       _chain[m] = 0;
       m++;
-      li = (li + n - 1) % n;
+      li = li === 0 ? n - 1 : li - 1;
     }
   }
 
@@ -137,25 +152,27 @@ function emitMonotoneFace(face: Face, tess: TessCallbacks): void {
   for (let j = 2; j < m - 1; j++) {
     if (_chain[j] !== _chain[_stack[sp - 1]]) {
       // Different chain: pop all, emit fan
+      const a = _verts[_merged[j]];
       while (sp > 1) {
         const v = _stack[--sp];
-        emitTri(tess, _verts[_merged[j]], _verts[_merged[v]], _verts[_merged[_stack[sp - 1]]]);
+        emitTri(tess, a, _verts[_merged[v]], _verts[_merged[_stack[sp - 1]]]);
       }
       --sp;
       _stack[sp++] = j - 1;
       _stack[sp++] = j;
     } else {
       // Same chain: pop while diagonal is inside polygon
+      const a = _verts[_merged[j]];
+      const upper = _chain[j] === 1;
       let last = _stack[--sp];
       while (sp > 0) {
-        const a = _verts[_merged[j]];
         const b = _verts[_merged[last]];
         const c = _verts[_merged[_stack[sp - 1]]];
         const cross = a.s * (b.t - c.t) + b.s * (c.t - a.t) + c.s * (a.t - b.t);
-        const valid = _chain[j] === 1 ? cross <= 0 : cross >= 0;
+        const valid = upper ? cross <= 0 : cross >= 0;
         if (!valid) break;
 
-        emitTri(tess, a, b, c);
+        emitTriCross(tess, a, b, c, cross);
         last = _stack[--sp];
       }
       _stack[sp++] = last;
@@ -164,9 +181,10 @@ function emitMonotoneFace(face: Face, tess: TessCallbacks): void {
   }
 
   // Last vertex (leftmost) connects to remaining stack
+  const aLast = _verts[_merged[m - 1]];
   while (sp > 1) {
     const v = _stack[--sp];
-    emitTri(tess, _verts[_merged[m - 1]], _verts[_merged[v]], _verts[_merged[_stack[sp - 1]]]);
+    emitTri(tess, aLast, _verts[_merged[v]], _verts[_merged[_stack[sp - 1]]]);
   }
 }
 

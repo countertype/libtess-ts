@@ -281,9 +281,9 @@ function callCombine(
   isect.data = null;
 
   if (tess.onCombine_) {
-    scratchCoords[0] = isect.coords[0];
-    scratchCoords[1] = isect.coords[1];
-    scratchCoords[2] = isect.coords[2];
+    scratchCoords[0] = isect.x;
+    scratchCoords[1] = isect.y;
+    scratchCoords[2] = isect.z;
     isect.data = tess.onCombine_(scratchCoords, data, weights, tess.polygonData);
   }
 
@@ -338,9 +338,9 @@ function vertexWeights(
     weights[weightIndex + 1] = w1;
   }
 
-  isect.coords[0] += w0 * org.coords[0] + w1 * dst.coords[0];
-  isect.coords[1] += w0 * org.coords[1] + w1 * dst.coords[1];
-  isect.coords[2] += w0 * org.coords[2] + w1 * dst.coords[2];
+  isect.x += w0 * org.x + w1 * dst.x;
+  isect.y += w0 * org.y + w1 * dst.y;
+  isect.z += w0 * org.z + w1 * dst.z;
 }
 
 function getIntersectData(
@@ -364,7 +364,7 @@ function getIntersectData(
   scratchData[2] = orgLo.data;
   scratchData[3] = dstLo.data;
 
-  isect.coords[0] = isect.coords[1] = isect.coords[2] = 0;
+  isect.x = isect.y = isect.z = 0;
 
   vertexWeights(isect, orgUp, dstUp, scratchWeights, 0);
   vertexWeights(isect, orgLo, dstLo, scratchWeights, 2);

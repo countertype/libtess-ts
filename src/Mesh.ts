@@ -1,7 +1,6 @@
 // Half-edge mesh data structure
 
 import { assert, DEBUG } from './Assert';
-import { V3 } from './types';
 
 // DictNode doubles as the sweep-line active region, which avoids
 // the node->key->region indirection chain
@@ -31,7 +30,10 @@ export class Vertex {
   next!: Vertex;
   prev!: Vertex;
   anEdge!: HalfEdge;
-  coords: V3 = [0, 0, 0];
+  // Input coordinates, stored as scalars to avoid a per-vertex array
+  x: number = 0.0;
+  y: number = 0.0;
+  z: number = 0.0;
   s: number = 0.0;
   t: number = 0.0;
   pqHandle: number = 0;
