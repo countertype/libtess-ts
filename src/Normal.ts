@@ -8,9 +8,9 @@ export function computeNormal(mesh: Mesh, norm: V3): void {
   const vHead = mesh.vHead;
   let v: Vertex = vHead.next;
 
-  let minVal0 = v.coords[0],
-    minVal1 = v.coords[1],
-    minVal2 = v.coords[2];
+  let minVal0 = v.x,
+    minVal1 = v.y,
+    minVal2 = v.z;
   let maxVal0 = minVal0,
     maxVal1 = minVal1,
     maxVal2 = minVal2;
@@ -22,9 +22,9 @@ export function computeNormal(mesh: Mesh, norm: V3): void {
     maxVert2: Vertex = v;
 
   for (v = vHead.next; v !== vHead; v = v.next) {
-    const c0 = v.coords[0],
-      c1 = v.coords[1],
-      c2 = v.coords[2];
+    const c0 = v.x,
+      c1 = v.y,
+      c2 = v.z;
     if (c0 < minVal0) {
       minVal0 = c0;
       minVert0 = v;
@@ -97,15 +97,15 @@ export function computeNormal(mesh: Mesh, norm: V3): void {
 
   // Find the third vertex that maximizes triangle area
   // (length of cross product == twice the triangle area)
-  const d1x = v1.coords[0] - v2.coords[0];
-  const d1y = v1.coords[1] - v2.coords[1];
-  const d1z = v1.coords[2] - v2.coords[2];
+  const d1x = v1.x - v2.x;
+  const d1y = v1.y - v2.y;
+  const d1z = v1.z - v2.z;
   let maxLen2 = 0;
 
   for (v = vHead.next; v !== vHead; v = v.next) {
-    const d2x = v.coords[0] - v2.coords[0];
-    const d2y = v.coords[1] - v2.coords[1];
-    const d2z = v.coords[2] - v2.coords[2];
+    const d2x = v.x - v2.x;
+    const d2y = v.y - v2.y;
+    const d2z = v.z - v2.z;
 
     const tnx = d1y * d2z - d1z * d2y;
     const tny = d1z * d2x - d1x * d2z;

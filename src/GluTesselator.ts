@@ -260,8 +260,8 @@ export class GluTesselator {
       tUnit[2] = 0.0;
 
       let v = vHead.next!;
-      let s = v.coords[0];
-      let t = v.coords[1] * tMul;
+      let s = v.x;
+      let t = v.y * tMul;
       v.s = s;
       v.t = t;
       let minS = s,
@@ -269,8 +269,8 @@ export class GluTesselator {
         minT = t,
         maxT = t;
       for (v = v.next!; v !== vHead; v = v!.next!) {
-        s = v.coords[0];
-        t = v.coords[1] * tMul;
+        s = v.x;
+        t = v.y * tMul;
         v.s = s;
         v.t = t;
         if (s < minS) minS = s;
@@ -321,15 +321,15 @@ export class GluTesselator {
 
     // Project the vertices onto the sweep plane and compute bounds
     let v = vHead.next!;
-    v.s = v.coords[0] * sUnit[0] + v.coords[1] * sUnit[1] + v.coords[2] * sUnit[2];
-    v.t = v.coords[0] * tUnit[0] + v.coords[1] * tUnit[1] + v.coords[2] * tUnit[2];
+    v.s = v.x * sUnit[0] + v.y * sUnit[1] + v.z * sUnit[2];
+    v.t = v.x * tUnit[0] + v.y * tUnit[1] + v.z * tUnit[2];
     let minS = v.s,
       maxS = v.s,
       minT = v.t,
       maxT = v.t;
     for (v = v.next!; v !== vHead; v = v!.next!) {
-      const s = v.coords[0] * sUnit[0] + v.coords[1] * sUnit[1] + v.coords[2] * sUnit[2];
-      const t = v.coords[0] * tUnit[0] + v.coords[1] * tUnit[1] + v.coords[2] * tUnit[2];
+      const s = v.x * sUnit[0] + v.y * sUnit[1] + v.z * sUnit[2];
+      const t = v.x * tUnit[0] + v.y * tUnit[1] + v.z * tUnit[2];
       v.s = s;
       v.t = t;
       if (s < minS) minS = s;
@@ -413,14 +413,14 @@ export class GluTesselator {
 
     // The new vertex is now e->Org
     e.Org.data = data || null;
-    e.Org.coords[0] = x;
-    e.Org.coords[1] = y;
+    e.Org.x = x;
+    e.Org.y = y;
     if (z !== 0) {
-      e.Org.coords[2] = z;
+      e.Org.z = z;
       this.hasNonZeroZ = true;
       this.projDone = false; // can't use 2D fast-path
     } else {
-      e.Org.coords[2] = 0.0;
+      e.Org.z = 0.0;
     }
 
     if (this.projDone) {

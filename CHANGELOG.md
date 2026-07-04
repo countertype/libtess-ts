@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.2] - 2026-07-02
+
+Performance release. Output is byte-identical to 0.0.1 on all test fixtures.
+
+### Performance
+
+3-8% faster on real-world inputs, strongest on large sweep-heavy polygons:
+
+- `Vertex` stores coordinates as scalar `x`/`y`/`z` fields instead of a per-vertex array (one less allocation per vertex)
+- Monotone-face rendering: no integer modulo in the chain-merge loop, inlined vertex comparisons, and the diagonal-validity cross product is reused for triangle orientation instead of recomputed
+
+### Fixed
+
+- Benchmark suite no longer aborts when a comparison library (tess2.js) crashes on degenerate input; the affected column is reported as `crash`
+
 ## [0.0.1] - 2026-02-11
 
 Initial release. TypeScript port of the SGI GLU tessellator, API-compatible with libtess.js

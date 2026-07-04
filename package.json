@@ -1,6 +1,6 @@
 {
   "name": "libtess-ts",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Optimized TypeScript port of libtess.js, itself based on the GLU tessellator. Fast, high quality polygon triangulation",
   "type": "module",
   "main": "./dist/libtess.min.js",
@@ -51,7 +51,7 @@
   "license": "SGI-B-2.0",
   "sideEffects": false,
   "devDependencies": {
-    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
     "libtess": "^1.2.2",
     "prettier": "^3.8.1",

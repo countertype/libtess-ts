@@ -2,7 +2,7 @@
 
 module.exports = {
   // Intersection heavy geometry for better coverage of intersection handling.
-  name: 'Moar Intersections',
+  name: 'More Intersections',
   value: [
     [
       1.000, 0.000, 0,

@@ -460,40 +460,51 @@ function bench2(label, runA, runB) {
 }
 
 function bench3(label, runA, runB, runC) {
-  for (let i = 0; i < WARMUP; i++) { runA(); runB(); runC(); }
+  // Some libraries (tess2.js) crash on degenerate/self-intersecting inputs.
+  // Probe each runner once; crashed columns are excluded from measurement
+  // and reported as "crash" so the rest of the suite still runs.
+  function probe(run) {
+    try { run(); return true; } catch { return false; }
+  }
+  const runs = [runA, runB, runC];
+  const ok = runs.map(probe);
+  const live = [0, 1, 2].filter(i => ok[i]);
 
-  const tA = new Float64Array(SAMPLES);
-  const tB = new Float64Array(SAMPLES);
-  const tC = new Float64Array(SAMPLES);
+  for (let i = 0; i < WARMUP; i++) for (const k of live) runs[k]();
 
-  // Rotate order each iteration: ABC, BCA, CAB
+  const times = [new Float64Array(SAMPLES), new Float64Array(SAMPLES), new Float64Array(SAMPLES)];
+
+  // Rotate order each iteration (ABC, BCA, CAB) among surviving runners
   for (let i = 0; i < SAMPLES; i++) {
-    switch (i % 3) {
-      case 0: tA[i] = runA(); tB[i] = runB(); tC[i] = runC(); break;
-      case 1: tB[i] = runB(); tC[i] = runC(); tA[i] = runA(); break;
-      case 2: tC[i] = runC(); tA[i] = runA(); tB[i] = runB(); break;
+    const rot = i % live.length;
+    for (let r = 0; r < live.length; r++) {
+      const k = live[(rot + r) % live.length];
+      times[k][i] = runs[k]();
     }
   }
 
-  const mA = mean(tA), mB = mean(tB), mC = mean(tC);
-  const ab = pairedTest(tA, tB);
-  const ac = pairedTest(tA, tC);
-  const bc = pairedTest(tB, tC);
+  const m = times.map((t, i) => (ok[i] ? mean(t) : NaN));
 
-  function fmt(baseline, other, res) {
-    const pct = ((other - baseline) / baseline * 100);
+  function col(name, i) {
+    return ok[i] ? `  ${name} ${(m[i] * 1000).toFixed(0).padStart(5)}μs` : `  ${name} ${'crash'.padStart(5)}  `;
+  }
+
+  function fmt(i, j) {
+    if (!ok[i] || !ok[j]) return 'crash';
+    const res = pairedTest(times[i], times[j]);
+    const pct = ((m[j] - m[i]) / m[i] * 100);
     const sig = res.p < 0.001 ? '***' : res.p < 0.01 ? '**' : res.p < 0.05 ? '*' : 'ns';
     return `${pct > 0 ? '+' : ''}${pct.toFixed(1)}% ${sig}`;
   }
 
   console.log(
     `  ${label.padEnd(PAD)}` +
-    `  JS ${(mA * 1000).toFixed(0).padStart(5)}μs` +
-    `  TS ${(mB * 1000).toFixed(0).padStart(5)}μs` +
-    `  T2 ${(mC * 1000).toFixed(0).padStart(5)}μs` +
-    `  JS→TS ${fmt(mA, mB, ab).padStart(10)}` +
-    `  JS→T2 ${fmt(mA, mC, ac).padStart(10)}` +
-    `  TS→T2 ${fmt(mB, mC, bc).padStart(10)}`
+    col('JS', 0) +
+    col('TS', 1) +
+    col('T2', 2) +
+    `  JS→TS ${fmt(0, 1).padStart(10)}` +
+    `  JS→T2 ${fmt(0, 2).padStart(10)}` +
+    `  TS→T2 ${fmt(1, 2).padStart(10)}`
   );
 }
 
